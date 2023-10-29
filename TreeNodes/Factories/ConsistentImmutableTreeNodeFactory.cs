@@ -1,5 +1,4 @@
 ﻿using CRTPNodesLibrary.TreeNodes;
-using CRTPNodesLibrary.TreeNodes.ExtensionTypes;
 
 namespace CRTPNodesLibrary.TreeNodes.Factories;
 

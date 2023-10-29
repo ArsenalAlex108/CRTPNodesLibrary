@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 using CRTPNodesLibrary.TreeNodes;
 
@@ -20,6 +21,6 @@ public sealed class TreeNodeReferenceEqualityComparer<TNode> : IEqualityComparer
 
     public int GetHashCode([DisallowNull] TNode obj)
     {
-        return obj.Children.GetHashCode();
+        return RuntimeHelpers.GetHashCode(obj.Children);
     }
 }

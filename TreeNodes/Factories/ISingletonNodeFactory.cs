@@ -1,8 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-using CRTPNodesLibrary.TreeNodes;
-
-namespace CRTPNodesLibrary.TreeNodes.ExtensionTypes;
+namespace CRTPNodesLibrary.TreeNodes.Factories;
 
 /// <summary>
 /// This type exists so that external types can use this pattern to reduce duplicated code.
@@ -11,6 +9,8 @@ namespace CRTPNodesLibrary.TreeNodes.ExtensionTypes;
 /// <typeparam name="T"></typeparam>
 public interface ISingletonNodeFactory<TNode, T> where TNode : class, ISingletonNode<TNode, T>, IClosedSingletonNode<T>
 {
+
+#warning Consider changing IEnumerable<IClosedSingletonNode<T>> to IEnumerable<TNode>.
     /// <summary>
     /// Requires <c>TNode</c> to have a constructor similiar to this factory method.
     /// </summary>
@@ -33,15 +33,13 @@ public interface ISingletonNodeFactory<TNode, T> where TNode : class, ISingleton
         ArgumentNullException.ThrowIfNull(root, nameof(root));
         ArgumentNullException.ThrowIfNull(selector, nameof(selector));
 
-        var list = ImmutableArray<IClosedSingletonNode<T>>.Empty;
-
-        list = list.AddRange(root.Children
-            .Select(child => ToSingletonNode(child, selector)));
+        var list = root.Children
+            .Select(child => ToSingletonNode(child, selector));
 
         var result = Create(selector(root), list, itemComparer);
 
         foreach (var child in list)
-            SetParent((TNode)child, result);
+            SetParent(child, result);
 
         return result;
     }

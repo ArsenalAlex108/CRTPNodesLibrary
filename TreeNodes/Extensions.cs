@@ -8,6 +8,7 @@ namespace CRTPNodesLibrary.TreeNodes;
 
 public static class Extensions
 {
+#warning Add more deferred methods.
 
     private static bool TolerantCheckCycles<TNode>(this TNode root, ImmutableHashSet<TNode> visitedNodes) where TNode : IReadOnlyNode<TNode>
     {
@@ -155,18 +156,18 @@ public static class Extensions
         return root.CheckCycles(visitedNodes);
     }
 
-    public static string Print<TNode>(this TNode root) where TNode : IReadOnlyNode<TNode>
+    public static string PrintTree<TNode>(this TNode root) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
         StringBuilder buffer = new();
 
-        root.Print(buffer);
+        root.PrintTree(buffer);
 
         return buffer.ToString();
     }
 
-    public static void Print<TNode>(this TNode root, StringBuilder buffer) where TNode : IReadOnlyNode<TNode>
+    public static void PrintTree<TNode>(this TNode root, StringBuilder buffer) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
         ArgumentNullException.ThrowIfNull(buffer, nameof(buffer));
@@ -189,6 +190,50 @@ public static class Extensions
     }
 
     /// <summary>
+    /// Deferredly creates a <c>preorder</c> <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering. Is not protected against infinite recursion.
+    /// </summary>
+    /// <typeparam name="TNode"></typeparam>
+    /// <param name="root"></param>
+    /// <param name="childrenCombiner"></param>
+    /// <returns></returns>
+    public static IEnumerable<TNode> MakePreorderDFSTreeIterableDeferredly<TNode>(this TNode root, Func<IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? childrenCombiner = null) where TNode : IReadOnlyNode<TNode>
+    {
+        ArgumentNullException.ThrowIfNull(root, nameof(root));
+
+        childrenCombiner ??= PreorderDFSChildrenCombine;
+
+        return Defer(root);
+
+        IEnumerable<TNode> Defer(TNode rootNode)
+        {
+            yield return rootNode;
+
+            var children = childrenCombiner(root.Children.Select(node => Defer(node)));
+
+            foreach (var node in children)
+            {
+                yield return node;
+            }
+        }
+    }
+
+    // <summary>
+    /// Default implementation of DFS childrenCombiner is <c>deferred</c> preorder iteration. Input is assumed not to be <c>null</c>.
+    /// </summary>
+    /// <typeparam name="TNode"></typeparam>
+    /// <param name="root"></param>
+    /// <param name="children"></param>
+    /// <returns></returns>
+    public static IEnumerable<TNode> PreorderDFSChildrenCombine<TNode>([DisallowNull] IEnumerable<IEnumerable<TNode>> childrenEnumerations)
+        where TNode : IReadOnlyNode<TNode>
+    {
+        foreach (var child in childrenEnumerations.SelectMany(childEnumerations => childEnumerations))
+        {
+            yield return child;
+        }
+    }
+
+    /// <summary>
     /// Default implementation of DFS combiner is <c>deferred</c> preorder iteration. Input is assumed not to be <c>null</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
@@ -200,20 +245,20 @@ public static class Extensions
     {
         yield return root;
 
-        foreach (var child in childrenEnumerations.SelectMany(childEnumerations => childEnumerations))
+        foreach (var node in PreorderDFSChildrenCombine(childrenEnumerations))
         {
-            yield return child;
+            yield return node;
         }
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). Is not protected against infinite recursion.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). Is not protected against infinite recursion.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSTreeIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSTreeIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
@@ -224,131 +269,145 @@ public static class Extensions
 
     private static IEnumerable<TNode> UnvalidatedMakeDFSTreeIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>> combiner) where TNode : IReadOnlyNode<TNode>
     {
-        var childrenEnumerable = ImmutableArray.CreateRange(root.Children
-            .Select(n => n.UnvalidatedMakeDFSTreeIterable(combiner)));
+        var childrenEnumerable = root.Children
+            .Select(n => n.UnvalidatedMakeDFSTreeIterable(combiner)).ToList();
 
         return combiner(root, childrenEnumerable);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking <c>Children</c> collections references.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking <c>Children</c> collections references.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSChildrenRefRecursionSafeGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSChildrenRefRecursionSafeGraphIterable<TNode>(this TNode root, out bool recursionOccured, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
     {
-        return root.MakeDFSRecursionSafeGraphIterable(TreeNodeReferenceEqualityComparer<TNode>.Comparer, combiner);
+        return root.MakeDFSRecursionSafeGraphIterable(out recursionOccured, TreeNodeReferenceEqualityComparer<TNode>.Comparer, combiner);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking node references.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking node references.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSRefRecursionSafeGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : class, IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSRefRecursionSafeGraphIterable<TNode>(this TNode root, out bool recursionOccured, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : class, IReadOnlyNode<TNode>
     {
-        return root.MakeDFSRecursionSafeGraphIterable(ReferenceEqualityComparer.Instance, combiner);
+        return root.MakeDFSRecursionSafeGraphIterable(out recursionOccured, ReferenceEqualityComparer.Instance, combiner);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). May protect against infinite recursion if the given comparer is implemented correctly.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). May protect against infinite recursion if the given comparer is implemented correctly.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSRecursionSafeGraphIterable<TNode>(this TNode root, IEqualityComparer<TNode>? comparer = null, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSRecursionSafeGraphIterable<TNode>(this TNode root, out bool recursionOccured, IEqualityComparer<TNode>? comparer = null, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
         combiner ??= PreorderDFSCombine;
 
-        return root.UnvalidatedMakeDFSTolerantGraphIterable(combiner,
+        return root.UnvalidatedMakeDFSTolerantGraphIterable(out recursionOccured, combiner,
                                                     ImmutableHashSet<TNode>.Empty.WithComparer(comparer));
     }
 
-    private static IEnumerable<TNode> UnvalidatedMakeDFSTolerantGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>> parentChildrenIterationCombiner, ImmutableHashSet<TNode> visitedNodes) where TNode : IReadOnlyNode<TNode>
+    private static IEnumerable<TNode> UnvalidatedMakeDFSTolerantGraphIterable<TNode>(this TNode root, out bool recursionOccured, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>> parentChildrenIterationCombiner, ImmutableHashSet<TNode> visitedNodes) where TNode : IReadOnlyNode<TNode>
     {
         var childrenEnumerable = new List<IEnumerable<TNode>>();
 
+        recursionOccured = false;
+
         foreach (var node in root.Children)
         {
-            if (visitedNodes.Contains(node)) continue;
+            if (visitedNodes.Contains(node))
+            {
+                recursionOccured = true;
+                continue;
+            }
 
             visitedNodes = visitedNodes.Add(node);
-            childrenEnumerable.Add(node.UnvalidatedMakeDFSTolerantGraphIterable(parentChildrenIterationCombiner, visitedNodes));
+            childrenEnumerable.Add(node.UnvalidatedMakeDFSTolerantGraphIterable(out recursionOccured, parentChildrenIterationCombiner, visitedNodes));
         }
 
         return parentChildrenIterationCombiner(root, childrenEnumerable);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking <c>Children</c> collections references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking <c>Children</c> collections references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSChildrenRefUniqueGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSChildrenRefUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
     {
-        return root.MakeDFSUniqueGraphIterable(TreeNodeReferenceEqualityComparer<TNode>.Comparer, combiner);
+        return root.MakeDFSUniqueGraphIterable(out sameNodeVisited, TreeNodeReferenceEqualityComparer<TNode>.Comparer, combiner);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking node references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). Is protected against infinite recursion by checking node references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSRefUniqueGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : class, IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSRefUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : class, IReadOnlyNode<TNode>
     {
-        return root.MakeDFSUniqueGraphIterable(ReferenceEqualityComparer.Instance, combiner);
+        return root.MakeDFSUniqueGraphIterable(out sameNodeVisited, ReferenceEqualityComparer.Instance, combiner);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given combiner to decide iteration ordering (default is preorder traversal). May protect against infinite recursion if the given comparer is implemented correctly, so that a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given childrenCombiner to decide iteration ordering (default is preorder traversal). May protect against infinite recursion if the given comparer is implemented correctly, so that a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeDFSUniqueGraphIterable<TNode>(this TNode root, IEqualityComparer<TNode>? comparer = null, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeDFSUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, IEqualityComparer<TNode>? comparer = null, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>>? combiner = null) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
         combiner ??= PreorderDFSCombine;
 
-        return root.UnvalidatedMakeDFSGraphIterable(combiner,
+        return root.UnvalidatedMakeDFSGraphIterable(out sameNodeVisited, combiner,
                                                    new(comparer));
     }
 
-    private static IEnumerable<TNode> UnvalidatedMakeDFSGraphIterable<TNode>(this TNode root, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>> parentChildrenIterationCombiner, HashSet<TNode> visitedNodes) where TNode : IReadOnlyNode<TNode>
+    private static IEnumerable<TNode> UnvalidatedMakeDFSGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, Func<TNode, IEnumerable<IEnumerable<TNode>>, IEnumerable<TNode>> parentChildrenIterationCombiner, HashSet<TNode> visitedNodes) where TNode : IReadOnlyNode<TNode>
     {
         var childrenEnumerable = new List<IEnumerable<TNode>>();
 
+        sameNodeVisited = false;
+
         foreach (var node in root.Children)
         {
-            if (visitedNodes.Add(node) is false) continue;
+            if (visitedNodes.Add(node) is false)
+            {
+                sameNodeVisited = true;
+                continue;
+            }
 
-            childrenEnumerable.Add(node.UnvalidatedMakeDFSGraphIterable(parentChildrenIterationCombiner, visitedNodes));
+            childrenEnumerable.Add(node.UnvalidatedMakeDFSGraphIterable(out sameNodeVisited,
+                                                                        parentChildrenIterationCombiner,
+                                                                        visitedNodes));
         }
 
         return parentChildrenIterationCombiner(root, childrenEnumerable);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given orderer to decide ordering of children in the queue. Is not protected protect against infinite recursion.
+    /// <c>Deferredly</c> creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given orderer to decide ordering of children in the queue. Is not protected protect against infinite recursion.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeBFSTreeIterable<TNode>(this TNode root, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeBFSTreeIterableDeferredly<TNode>(this TNode root, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
@@ -375,65 +434,70 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given orderer to decide ordering of children in the queue. Is protected against infinite recursion by checking <c>Children</c> collections references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given orderer to decide ordering of children in the queue. Is protected against infinite recursion by checking <c>Children</c> collections references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeBFSChildrenRefUniqueGraphIterable<TNode>(this TNode root, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeBFSChildrenRefUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : IReadOnlyNode<TNode>
     {
-        return root.MakeBFSUniqueGraphIterable(TreeNodeReferenceEqualityComparer<TNode>.Comparer, childrenReorderer);
+        return root.MakeBFSUniqueGraphIterable(out sameNodeVisited, TreeNodeReferenceEqualityComparer<TNode>.Comparer, childrenReorderer);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given orderer to decide ordering of children in the queue. Is protected against infinite recursion by checking node references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given orderer to decide ordering of children in the queue. Is protected against infinite recursion by checking node references, so a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeBFSRefUniqueGraphIterable<TNode>(this TNode root, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : class, IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeBFSRefUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : class, IReadOnlyNode<TNode>
     {
-        return root.MakeBFSUniqueGraphIterable(ReferenceEqualityComparer.Instance, childrenReorderer);
+        return root.MakeBFSUniqueGraphIterable(out sameNodeVisited, ReferenceEqualityComparer.Instance, childrenReorderer);
     }
 
     /// <summary>
-    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the give root, using the given orderer to decide ordering of children in the queue. May protect against infinite recursion if the given comparer is implemented correctly, so that a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
+    /// Creates an <c>Iterable&lt;TNode&gt;</c> from the given root, using the given orderer to decide ordering of children in the queue. May protect against infinite recursion if the given comparer is implemented correctly, so that a node only appears once in <c>Iterable&lt;TNode&gt;</c>.
     /// </summary>
     /// <typeparam name="TNode"></typeparam>
     /// <param name="root"></param>
     /// <param name="combiner"></param>
     /// <returns></returns>
-    public static IEnumerable<TNode> MakeBFSUniqueGraphIterable<TNode>(this TNode root, IEqualityComparer<TNode>? comparer = null, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : IReadOnlyNode<TNode>
+    public static IEnumerable<TNode> MakeBFSUniqueGraphIterable<TNode>(this TNode root, out bool sameNodeVisited, IEqualityComparer<TNode>? comparer = null, Func<IEnumerable<TNode>, IEnumerable<TNode>>? childrenReorderer = null) where TNode : IReadOnlyNode<TNode>
     {
         ArgumentNullException.ThrowIfNull(root, nameof(root));
 
-        return Defer();
+        sameNodeVisited = false;
 
-        IEnumerable<TNode> Defer()
+        var queue = new Queue<TNode>();
+        var visitedNodes = new HashSet<TNode>(comparer);
+
+        queue.Enqueue(root);
+
+        var result = new LinkedList<TNode>();
+
+        while (queue.Count > 0)
         {
-            var queue = new Queue<TNode>();
-            var visitedNodes = new HashSet<TNode>(comparer);
+            var node = queue.Dequeue();
 
-            queue.Enqueue(root);
+            childrenReorderer ??= (x => x);
 
-            while (queue.Count > 0)
+            foreach (var child in childrenReorderer(node.Children))
             {
-                var node = queue.Dequeue();
-
-                childrenReorderer ??= (x => x);
-
-                foreach (var child in childrenReorderer(node.Children))
+                if (visitedNodes.Add(child) is false)
                 {
-                    if (visitedNodes.Add(child) is false) continue;
-
-                    queue.Enqueue(child);
+                    sameNodeVisited = true;
+                    continue;
                 }
 
-                yield return node;
+                queue.Enqueue(child);
             }
+
+            _ = result.AddLast(node);
         }
+
+        return result;
     }
 
     public static ReadOnlySingletonValueNode<string> ToReadOnlySingletonStringValueNode<TNode>(this TNode root) where TNode : IReadOnlyNode<TNode>
