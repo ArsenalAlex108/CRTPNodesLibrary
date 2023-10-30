@@ -12,11 +12,11 @@ public sealed class ReadOnlySingletonNodeFactory<T> : ISingletonNodeFactory<Read
     {
     }
 
-    public ReadOnlySingletonNode<T> Create(T? value, IEnumerable<IClosedSingletonNode<T>>? children, IEqualityComparer<T>? itemComparer)
+    public ReadOnlySingletonNode<T> Create(T? value, IEnumerable<ReadOnlySingletonNode<T>>? children, IEqualityComparer<T>? itemComparer)
     {
-        children ??= Enumerable.Empty<IClosedSingletonNode<T>>();
+        children ??= Enumerable.Empty<ReadOnlySingletonNode<T>>();
 
-        return new(value, children.Select(x => Create(x.Value, x.Children, itemComparer)).ToImmutableList(), itemComparer);
+        return new(value, children.ToImmutableList(), itemComparer);
     }
 
     void ISingletonNodeFactory<ReadOnlySingletonNode<T>, T>.SetParent(ReadOnlySingletonNode<T> child, ReadOnlySingletonNode<T>? parent)

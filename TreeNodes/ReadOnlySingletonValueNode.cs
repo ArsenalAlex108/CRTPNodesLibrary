@@ -1,4 +1,5 @@
 ﻿using CRTPNodesLibrary.Comparers;
+using CRTPNodesLibrary.TreeNodes.Factories;
 
 using System.Collections.Immutable;
 
@@ -8,7 +9,7 @@ namespace CRTPNodesLibrary.TreeNodes;
 /// An implementation of a tree node using structs. Some features are missing due to the limitations of value type.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public readonly struct ReadOnlySingletonValueNode<T> : ISingletonNode<ReadOnlySingletonValueNode<T>, T>, IEquatable<ReadOnlySingletonValueNode<T>>
+public readonly struct ReadOnlySingletonValueNode<T> : ISingletonNode<ReadOnlySingletonValueNode<T>, T>, IEquatable<ReadOnlySingletonValueNode<T>>, IBuildableSingletonNode<ReadOnlySingletonValueNode<T>, T>
 {
     private readonly TreeStructuralEqualityComparer<ReadOnlySingletonValueNode<T>> _treeComparer;
 
@@ -23,6 +24,8 @@ public readonly struct ReadOnlySingletonValueNode<T> : ISingletonNode<ReadOnlySi
         _treeComparer = new((x, y) => self.ItemComparer.Equals(x.Value, y.Value),
                             x => x.Value?.GetHashCode() ?? 0);
     }
+
+    public static ISingletonNodeFactory<ReadOnlySingletonValueNode<T>, T> Factory => ReadOnlySingletonValueNodeFactory<T>.Factory;
 
     public T? Value { get; init; }
 

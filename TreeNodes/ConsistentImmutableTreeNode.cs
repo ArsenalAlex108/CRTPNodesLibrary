@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 
 using CRTPNodesLibrary.TreeNodes.ExtensionTypes;
+using CRTPNodesLibrary.TreeNodes.Factories;
 
 namespace CRTPNodesLibrary.TreeNodes;
 
@@ -9,7 +10,8 @@ public sealed class ConsistentImmutableTreeNode<T> : SingletonNode<ConsistentImm
                                                      ISingletonNode<ConsistentImmutableTreeNode<T>, T>,
                                                      IConsistentImmutableTreeNode<T>,
                                                      IClosedReadOnlyNode,
-                                                     IClosedSingletonNode<T>
+                                                     IClosedSingletonNode<T>,
+                                                     IBuildableSingletonNode<ConsistentImmutableTreeNode<T>, T>
 {
     public ConsistentImmutableTreeNode(T? value, IEnumerable<IClosedSingletonNode<T>>? children = null, IEqualityComparer<T>? itemComparer = null) : base(value, itemComparer)
     {
@@ -37,7 +39,7 @@ public sealed class ConsistentImmutableTreeNode<T> : SingletonNode<ConsistentImm
     /// </summary>
     /// <param name="value"></param>
     /// <param name="children"></param>
-    /// <returns>The replaced node, and the root of the tree in the out parameter</returns>
+    /// <returns>The replaced node, and the _root of the tree in the out parameter</returns>
     public ConsistentImmutableTreeNode<T> Reconstruct(T? value,
                                                         out ConsistentImmutableTreeNode<T> root,
                                                       IReadOnlyList<IClosedSingletonNode<T>>? children = null)
@@ -120,4 +122,6 @@ public sealed class ConsistentImmutableTreeNode<T> : SingletonNode<ConsistentImm
     IReadOnlyList<IClosedSingletonNode<T>> IReadOnlyNode<IClosedSingletonNode<T>>.Children => Children;
 
     IClosedSingletonNode<T>? IReadOnlyNode<IClosedSingletonNode<T>>.Parent => Parent;
+
+    public static ISingletonNodeFactory<ConsistentImmutableTreeNode<T>, T> Factory => ConsistentImmutableTreeNodeFactory<T>.Factory;
 }

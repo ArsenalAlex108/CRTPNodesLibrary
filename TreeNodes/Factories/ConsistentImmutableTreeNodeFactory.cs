@@ -1,6 +1,4 @@
-﻿using CRTPNodesLibrary.TreeNodes;
-
-namespace CRTPNodesLibrary.TreeNodes.Factories;
+﻿namespace CRTPNodesLibrary.TreeNodes.Factories;
 
 
 public sealed class ConsistentImmutableTreeNodeFactory<T> : ISingletonNodeFactory<ConsistentImmutableTreeNode<T>, T>
@@ -11,7 +9,7 @@ public sealed class ConsistentImmutableTreeNodeFactory<T> : ISingletonNodeFactor
     {
     }
 
-    public ConsistentImmutableTreeNode<T> Create(T? value, IEnumerable<IClosedSingletonNode<T>>? children = null, IEqualityComparer<T>? itemComparer = null)
+    public ConsistentImmutableTreeNode<T> Create(T? value, IEnumerable<ConsistentImmutableTreeNode<T>>? children = null, IEqualityComparer<T>? itemComparer = null)
     {
         return new(value, children, itemComparer);
     }

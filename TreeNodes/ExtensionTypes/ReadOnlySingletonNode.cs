@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
 
-using CRTPNodesLibrary.TreeNodes;
+using CRTPNodesLibrary.TreeNodes.Factories;
 
 namespace CRTPNodesLibrary.TreeNodes.ExtensionTypes;
 
@@ -11,7 +11,8 @@ namespace CRTPNodesLibrary.TreeNodes.ExtensionTypes;
 public sealed class ReadOnlySingletonNode<T> : SingletonNode<ReadOnlySingletonNode<T>, T>,
                                                ISingletonNode<ReadOnlySingletonNode<T>, T>,
                                                IClosedReadOnlyNode,
-                                               IClosedSingletonNode<T>
+                                               IClosedSingletonNode<T>,
+                                               IBuildableSingletonNode<ReadOnlySingletonNode<T>, T>
 {
     public ReadOnlySingletonNode(T? value,
                                  IImmutableList<ReadOnlySingletonNode<T>> children,
@@ -32,6 +33,8 @@ public sealed class ReadOnlySingletonNode<T> : SingletonNode<ReadOnlySingletonNo
 
         SupportsParent = true;
     }
+
+    public static ISingletonNodeFactory<ReadOnlySingletonNode<T>, T> Factory => ReadOnlySingletonNode<T>.Factory;
 
     public IImmutableList<ReadOnlySingletonNode<T>> Children { get; }
 

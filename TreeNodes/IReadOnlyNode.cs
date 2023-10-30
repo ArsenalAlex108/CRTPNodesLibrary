@@ -1,4 +1,6 @@
-﻿namespace CRTPNodesLibrary.TreeNodes;
+﻿
+
+namespace CRTPNodesLibrary.TreeNodes;
 
 /// <summary>
 /// Consider implementing <c>IClosedReadOnlyNode</c> if TNode is a reference type.
