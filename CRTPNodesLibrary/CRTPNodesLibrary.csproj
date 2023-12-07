@@ -14,8 +14,4 @@
     <PackageReference Include="ImpromptuInterface" Version="7.0.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="TreeNodes\ExtensionMethods\Level1\Level2\" />
-  </ItemGroup>
-
 </Project>

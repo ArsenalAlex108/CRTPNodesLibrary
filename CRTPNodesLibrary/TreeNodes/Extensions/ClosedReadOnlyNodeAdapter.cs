@@ -4,7 +4,7 @@ namespace CRTPNodesLibrary.TreeNodes.ExtensionMethods;
 
 public static partial class TreeNodeExtensions
 {
-    private class ClosedReadOnlyNodeAdapter<TNode>(IReadOnlyNode<TNode> root) : IClosedReadOnlyNode where TNode : IReadOnlyNode<TNode>
+    private sealed class ClosedReadOnlyNodeAdapter<TNode>(IReadOnlyNode<TNode> root) : IClosedReadOnlyNode where TNode : IReadOnlyNode<TNode>
     {
         private readonly IReadOnlyNode<TNode> _root = root ?? throw new ArgumentNullException(nameof(root));
 
