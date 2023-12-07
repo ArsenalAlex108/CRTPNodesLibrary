@@ -4,7 +4,7 @@ namespace CRTPNodesLibrary.TreeNodes.ExtensionMethods;
 
 public static partial class TreeNodeExtensions
 {
-    private class ClosedSingletonNodeAdapter<TNode, T>(ISingletonNode<TNode, T> root) : IClosedSingletonNode<T> where TNode : ISingletonNode<TNode, T>
+    private sealed class ClosedSingletonNodeAdapter<TNode, T>(ISingletonNode<TNode, T> root) : IClosedSingletonNode<T> where TNode : ISingletonNode<TNode, T>
     {
         private readonly ISingletonNode<TNode, T> _root = root ?? throw new ArgumentNullException(nameof(root));
 
