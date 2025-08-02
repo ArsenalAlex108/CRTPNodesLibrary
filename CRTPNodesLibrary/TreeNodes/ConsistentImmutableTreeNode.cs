@@ -8,10 +8,11 @@ using CRTPNodesLibrary.TreeNodes.Factories;
 namespace CRTPNodesLibrary.TreeNodes;
 
 
-public sealed class ConsistentImmutableTreeNode<T> : SingletonNode<ConsistentImmutableTreeNode<T>, T>,
-                                                     ISingletonNode<ConsistentImmutableTreeNode<T>, T>,
-                                                     IConsistentImmutableTreeNode<T>,
-                                                     IBuildableSingletonNode<ConsistentImmutableTreeNode<T>, T>
+public sealed class ConsistentImmutableTreeNode<T> :
+    SingletonNode<ConsistentImmutableTreeNode<T>, T>,
+    ISingletonNode<ConsistentImmutableTreeNode<T>, T>,
+    IConsistentImmutableTreeNode<T>,
+    IBuildableSingletonNode<ConsistentImmutableTreeNode<T>, T>
 {
     public ConsistentImmutableTreeNode(T? value, IEnumerable<IClosedSingletonNode<T>>? children = null, IEqualityComparer<T>? itemComparer = null) : base(value, itemComparer)
     {

@@ -28,7 +28,7 @@ public class ExtensionsTests
         var result = _root.ConfigureIteration(i => i
                                             .DFS(j => j
                                                 .Preorder()))
-                                                    .Select(i => i.Value);
+                                            .Select(i => i.Value);
 
         Assert.AreEqual(expected.AsPrintable(default(int)),
                         result.AsPrintable(default(int)),
@@ -43,7 +43,7 @@ public class ExtensionsTests
         var result = _root.ConfigureIteration(i => i
                                             .DFS(j => j
                                                 .Postorder()))
-                                                    .Select(i => i.Value);
+                                            .Select(i => i.Value);
 
         Assert.AreEqual(expected.AsPrintable(default(int)),
                         result.AsPrintable(default(int)),
@@ -56,7 +56,7 @@ public class ExtensionsTests
         IEnumerable<int> expected = [0, 1, 2, 3, 4, 5, 6];
         var result = _root.ConfigureIteration( i => i
                                             .BFS())
-                                                .Select(i => i.Value);
+                                        .Select(i => i.Value);
 
         Assert.AreEqual(expected.AsPrintable(default(int)),
                         result.AsPrintable(default(int)),

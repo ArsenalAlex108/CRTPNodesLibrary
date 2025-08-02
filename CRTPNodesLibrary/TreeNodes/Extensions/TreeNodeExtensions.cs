@@ -14,7 +14,6 @@ namespace CRTPNodesLibrary.TreeNodes.ExtensionMethods;
 
 public static partial class TreeNodeExtensions
 {
-
     public enum RecursionCheckOption
     {
         None,

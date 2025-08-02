@@ -32,7 +32,7 @@ public interface IReadOnlyNode<out TNode> : IEnumerable<TNode> where TNode : IRe
     /// <exception cref="NotSupportedException"></exception>
     TNode? Parent { get; }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1033:Interface methods should be callable by child types", Justification = "Trivial>")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1033:Interface methods should be callable by child types", Justification = "Trivial")]
     IEnumerator<TNode> IEnumerable<TNode>.GetEnumerator() => TreeNodeExtensions.IterateDefault((TNode)this).GetEnumerator();
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1033:Interface methods should be callable by child types", Justification = "Trivial")]
